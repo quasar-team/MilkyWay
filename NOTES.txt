@@ -1,0 +1,9 @@
+This is how I (Piotr) see this project:
+
+* note few years back this all was not possible (Python toolkits were not yet there)
+* it's a simple integration layer for (some) Python OPCUA toolkit
+* it's value is in simplicity
+* I think that modelling with quasar Design is better for resource-starved projects to modelling by plain OPCUA
+* compared to Poverty:
+  * it'd be simpler to run (e.g. no C++ involved at all)
+* many patterns for similar type of software to profit from, e.g. from flask

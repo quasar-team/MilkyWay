@@ -1,0 +1,484 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d:design xmlns:d="http://cern.ch/quasar/Design" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" projectShortName="OpcUaSca" xsi:schemaLocation="http://cern.ch/quasar/Design Design.xsd ">
+  <d:class name="SCA">
+    <d:devicelogic/>
+    <d:cachevariable name="address" addressSpaceWrite="forbidden" initializeWith="configuration" nullPolicy="nullForbidden" dataType="UaString">
+      <d:documentation>
+            The address of given SCA in a ScaSoftware convention.<br/>
+            The generic form is:<br/>
+            backendType://xxx<br/>
+            Some common examples of addresses:<br/>
+            <ul>
+            <li><pre>sca-simulator://1</pre>  (first simulated SCA)
+            </li>
+            <li><pre>simple-netio://direct/felixhost/port1/port2/elink</pre>  
+            (to directly connect to felixcore on host
+              <code>felixhost</code>, FromHost port <code>port1</code> (often 12340), ToHost port <code>port2</code> (often 12345 or 12350) and elink <code>elink</code> (treated in hex e.g. "3F").
+            </li>
+            <li>
+            <pre>simple-netio://direct/felixhost/port1/port2/elinkTx/elinkRx</pre>  
+            (to directly connect to felixcore on host
+              <code>felixhost</code>, FromHost port <code>port1</code> (often 12340), ToHost port <code>port2</code> (often 12345 or 12350) 
+              and elinks <code>elinkTx</code> for FromHost direction and <code>elinkRx</code> for ToHost direction (both treated in hex e.g. "3F").
+            </li>
+            </ul>
+            
+        </d:documentation>
+    </d:cachevariable>
+    <d:hasobjects instantiateUsing="configuration" class="I2cMaster" maxOccurs="16">
+  	</d:hasobjects>
+    <d:hasobjects instantiateUsing="configuration" class="SpiSystem" maxOccurs="1">
+  	</d:hasobjects>
+    <d:cachevariable name="online" addressSpaceWrite="forbidden" initializeWith="valueAndStatus" nullPolicy="nullAllowed" dataType="OpcUa_Boolean" initialStatus="OpcUa_BadWaitingForInitialData">
+      <d:documentation>
+            Is true if the SCA responds to ping requests periodically sent by the SCA Supervisor, otherwise false.
+            The variable is valid only if the SCA is configured as supervised (refer to config entry "supervised").
+        </d:documentation>
+    </d:cachevariable>
+    <d:hasobjects instantiateUsing="configuration" class="AnalogInputSystem" minOccurs="1" maxOccurs="1">
+    </d:hasobjects>
+    <d:hasobjects instantiateUsing="configuration" class="DigitalIOSystem" maxOccurs="1" minOccurs="0">
+    </d:hasobjects>
+    <d:hasobjects instantiateUsing="configuration" class="DacSystem"/>
+    <d:cachevariable name="id" addressSpaceWrite="forbidden" initializeWith="valueAndStatus" nullPolicy="nullAllowed" dataType="OpcUa_UInt32" initialStatus="OpcUa_BadWaitingForInitialData">
+      <d:documentation>
+            Stores the SCA unique ID number queried from the hardware in the initialization phase.
+        </d:documentation>
+    </d:cachevariable>
+    <d:cachevariable name="numberRequests" addressSpaceWrite="forbidden" initializeWith="valueAndStatus" nullPolicy="nullForbidden" dataType="OpcUa_UInt64" initialStatus="OpcUa_Good" initialValue="0">
+      <d:documentation>
+            Number of SCA requests sent to this SCA since it was initialized (i.e. whatever before and up to deferred initialization doesn't count).
+        </d:documentation>
+    </d:cachevariable>
+    <d:cachevariable name="numberReplies" addressSpaceWrite="forbidden" initializeWith="valueAndStatus" nullPolicy="nullForbidden" dataType="OpcUa_UInt64" initialStatus="OpcUa_Good" initialValue="0">
+      <d:documentation>
+            Number of SCA replies received from this SCA since it was initialized (i.e. whatever before and up to deferred initialization doesn't count).
+        </d:documentation>
+    </d:cachevariable>
+    <d:cachevariable name="lastReplySecondsAgo" addressSpaceWrite="forbidden" initializeWith="valueAndStatus" nullPolicy="nullAllowed" dataType="OpcUa_UInt64" initialStatus="OpcUa_BadWaitingForInitialData">
+      <d:documentation>
+            Number of seconds since any reply from this SCA has been received, updated by the server at least once per second.
+        </d:documentation>
+    </d:cachevariable>
+    <d:cachevariable initializeWith="valueAndStatus" dataType="OpcUa_Double" name="requestRate" nullPolicy="nullAllowed" addressSpaceWrite="forbidden" initialStatus="OpcUa_BadWaitingForInitialData">
+      <d:documentation>Request rate sent to this SCA expressed in requests per second.</d:documentation>
+    </d:cachevariable>
+    <d:cachevariable initializeWith="valueAndStatus" dataType="OpcUa_UInt64" name="numberLostReplies" nullPolicy="nullAllowed" addressSpaceWrite="forbidden" initialStatus="OpcUa_BadWaitingForInitialData">
+      <d:documentation>Total number of lost replies. It's counted synchronously therefore it is a higher quality indicator than difference between numberRequests and numberReplies.</d:documentation>
+    </d:cachevariable>
+    <d:cachevariable initializeWith="valueAndStatus" dataType="OpcUa_Float" name="lostRepliesRate" nullPolicy="nullAllowed" addressSpaceWrite="forbidden" initialStatus="OpcUa_BadWaitingForInitialData">
+      <d:documentation>Rate of lost replies expressed in requests per second.</d:documentation>
+    </d:cachevariable>
+    <d:hasobjects instantiateUsing="configuration" class="JtagSystem" maxOccurs="1"/>
+    <d:configentry dataType="UaString" name="idConstraint">
+      <d:configRestriction>
+        <d:restrictionByPattern pattern="dont_care|[1-9][0-9]*"/>
+      </d:configRestriction>
+      <d:documentation>
+               Any value other than <code>dont_care</code> will enforce a check against connected SCA ID; 
+               the connected SCA will not be accepted (and its initialization will be periodically retried) 
+               until values match.
+               </d:documentation>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Boolean" name="supervised" storedInDeviceObject="true">
+      <d:documentation>
+              If true, the SCA Supervisor will try to take good care of this SCA, e.g. will reinitialize it post
+              communication failure (subject to <code>recoveryActionScaStayedPowered</code> and <code>
+              recoveryActionScaWasRepowered</code> settings below). If false, the SCA Supervisor will do nothing.
+          </d:documentation>
+    </d:configentry>
+    <d:configentry dataType="UaString" name="recoveryActionScaStayedPowered">
+      <d:configRestriction>
+        <d:restrictionByEnumeration>
+          <d:enumerationValue value="do_nothing"/>
+          <d:enumerationValue value="only_configure"/>
+          <d:enumerationValue value="reset_and_configure"/>
+        </d:restrictionByEnumeration>
+      </d:configRestriction>
+      <d:documentation>What to do after communication to given SCA is recovered and it seems that SCA itself stayed powered (i.e. it hasn't lost its settings).</d:documentation>
+    </d:configentry>
+    <d:configentry dataType="UaString" name="recoveryActionScaWasRepowered">
+      <d:configRestriction>
+        <d:restrictionByEnumeration>
+          <d:enumerationValue value="do_nothing"/>
+          <d:enumerationValue value="only_configure"/>
+          <d:enumerationValue value="reset_and_configure"/>
+        </d:restrictionByEnumeration>
+      </d:configRestriction>
+      <d:documentation>What to do after communication to given SCA is recovered and it seems that SCA itself lost the power (i.e. it lost its settings).</d:documentation>
+    </d:configentry>
+    <d:configentry dataType="UaString" name="managementFromAddressSpace" storedInDeviceObject="true">
+      <d:configRestriction>
+        <d:restrictionByEnumeration>
+          <d:enumerationValue value="only_if_kaputt"/>
+          <d:enumerationValue value="denied"/>
+          <d:enumerationValue value="unconditional"/>
+        </d:restrictionByEnumeration>
+      </d:configRestriction>
+      <d:documentation>
+            How to treat calls to reset method in SCA's address-space. Taken into account only for a non-supervised SCA
+            (i.e. supervised=false).
+        </d:documentation>
+    </d:configentry>
+    <d:method name="reset" executionSynchronicity="asynchronous">
+      <d:documentation>
+            If allowed by the configuration, calling this method will invoke SCA reset. 
+            Refer to the documentation of the following config entries:
+            managementFromAddressSpace.
+        </d:documentation>
+    </d:method>
+    <d:method name="ping" executionSynchronicity="asynchronous">
+      <d:returnvalue dataType="OpcUa_Boolean" name="pong"/>
+      <d:documentation>
+          Requests a ping of the SCA. Should always succeed, any error will simply yield false in the response (return value pong).  
+      </d:documentation>
+    </d:method>
+    <d:documentation>
+        This class corresponds to one physical SCA chip.
+    </d:documentation>
+  </d:class>
+  <d:class name="AnalogInput">
+    <d:devicelogic/>
+    <d:cachevariable name="value" addressSpaceWrite="forbidden" initializeWith="valueAndStatus" nullPolicy="nullAllowed" dataType="OpcUa_Float" initialStatus="OpcUa_BadWaitingForInitialData">
+      <d:documentation>Stores the most recent voltage of given channel expressed in volts. Will be NULL if conversion isn't successful.</d:documentation>
+    </d:cachevariable>
+    <d:cachevariable initializeWith="valueAndStatus" dataType="OpcUa_UInt16" name="rawValue" nullPolicy="nullAllowed" addressSpaceWrite="forbidden" initialStatus="OpcUa_BadWaitingForInitialData">
+      <d:documentation>Stores the most recent conversion result of given channel expressed in ADC counts. Will be NULL if conversion isn't successful.</d:documentation>
+    </d:cachevariable>
+    <d:configentry dataType="OpcUa_Byte" name="id">
+      <d:documentation>
+        The analog channel number from 0 to 31 inclusive. 
+        Note that the channel 31 is hardware-mapped to an internal temperature sensor.
+        </d:documentation>
+      <d:configRestriction>
+        <d:restrictionByBounds maxInclusive="31" minInclusive="0"/>
+      </d:configRestriction>
+    </d:configentry>
+    <d:method name="getConsecutiveRawSamples" executionSynchronicity="asynchronous">
+      <d:argument dataType="OpcUa_UInt16" name="number">
+        <d:documentation>Number of samples to convert.</d:documentation>
+      </d:argument>
+      <d:returnvalue dataType="OpcUa_UInt16" name="samples">
+        <d:array/>
+        <d:documentation>Array of conversions in ADC counts.</d:documentation>
+      </d:returnvalue>
+      <d:documentation>Performs 'number' (see the argument) consecutive conversions of given channel. Returns an array of conversions in ADC counts.</d:documentation>
+    </d:method>
+    <d:configentry dataType="OpcUa_Boolean" name="enableCurrentSource" storedInDeviceObject="false" defaultValue="false">
+        <d:documentation>Whether to enable current source while performing ADC conversion.</d:documentation>
+    </d:configentry>
+  </d:class>
+  <d:class name="I2cMaster">
+    <d:devicelogic/>
+    <d:configentry dataType="OpcUa_Byte" name="masterId" storedInDeviceObject="true">
+      <d:documentation>The I2C master channel of the SCA (I2Cx) from 0 to 15.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByBounds minInclusive="0" maxInclusive="15"/>
+      </d:configRestriction>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_UInt16" name="busSpeed">
+      <d:documentation>The programmable data transfer rate of the I2C bus. Values between 100, 200, 400, 1000 in KHz.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByEnumeration>
+          <d:enumerationValue value="100"/>
+          <d:enumerationValue value="200"/>
+          <d:enumerationValue value="400"/>
+          <d:enumerationValue value="1000"/>
+        </d:restrictionByEnumeration>
+      </d:configRestriction>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Boolean" name="sclPadCmosOutput">
+      <d:documentation>Defines the SCL mode of operation.<br/>
+In case it is FALSE, the SCL pad acts as open-drain.
+<ul><li>SCL value equal to 0 -&gt; Force the SCL line to DGND.</li><li>SCL value equal to 1 -&gt; SCL line in high impedance.</li></ul>
+In case it is TRUE, the SCL pad acts as CMOS output. 
+<ul><li>SCL value equal to 0 -&gt; Force the SCL line to DGND.</li><li>SCL value equal to 1 -&gt; Force the SCL line to DVDD.</li></ul>
+</d:documentation>
+    </d:configentry>
+    <d:sourcevariable dataType="UaString" name="diagnostics" addressSpaceRead="asynchronous" addressSpaceReadUseMutex="no" addressSpaceWrite="forbidden" addressSpaceWriteUseMutex="no">
+      <d:documentation>
+            Returns current diagnostic snapshot of I2C component registers. 
+        </d:documentation>
+    </d:sourcevariable>
+    <d:hasobjects instantiateUsing="configuration" class="I2cSlave" maxOccurs="1024" minOccurs="1">
+</d:hasobjects>
+    <d:documentation>Parent class of I2C slaves. You can declare up to 16 I2C masters.</d:documentation>
+  </d:class>
+  <d:class name="SpiSystem">
+    <d:devicelogic/>
+    <d:hasobjects instantiateUsing="configuration" class="SpiSlave" maxOccurs="8" minOccurs="1">
+  	</d:hasobjects>
+    <d:documentation>Parent class of SPI slaves.</d:documentation>
+  </d:class>
+  <d:class name="AnalogInputSystem">
+    <d:devicelogic/>
+    <d:hasobjects instantiateUsing="configuration" class="AnalogInput"/>
+    <d:sourcevariable dataType="UaString" name="diagnostics" addressSpaceRead="asynchronous" addressSpaceReadUseMutex="no" addressSpaceWrite="forbidden" addressSpaceWriteUseMutex="no">
+      <d:documentation>
+            When read returns current diagnostic snapshot of SCA's Analog Input registers.
+        </d:documentation>
+    </d:sourcevariable>
+    <d:cachevariable name="generalRefreshRate" addressSpaceWrite="regular" initializeWith="configuration" nullPolicy="nullForbidden" dataType="OpcUa_Double" initialStatus="OpcUa_Good">
+      <d:documentation>Refresh rate in Hz. All channels of this SCA will be refreshed with this rate. Zero means that ADC refreshing will be disabled for this particular SCA.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByBounds minInclusive="0"/>
+      </d:configRestriction>
+    </d:cachevariable>
+  </d:class>
+  <d:class name="SpiSlave">
+    <d:devicelogic>
+      <d:mutex/>
+    </d:devicelogic>
+    <d:configentry dataType="OpcUa_UInt32" name="busSpeed">
+      <d:documentation>The serial transmission frequency of the SPI bus. Allows frequencies between 305 to 20000000 in Hz.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByBounds minInclusive="305" maxInclusive="20000000"/>
+      </d:configRestriction>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Byte" name="transmissionSize">
+      <d:documentation>The single transaction length of the SPI bus. Allowed sizes from 1 to 128 in bits. Doesn't relate to the factual size of the total SPI transmission.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByBounds minInclusive="1" maxInclusive="128"/>
+      </d:configRestriction>
+    </d:configentry>
+    <d:sourcevariable dataType="UaByteString" name="value" addressSpaceRead="asynchronous" addressSpaceReadUseMutex="of_containing_object" addressSpaceWrite="asynchronous" addressSpaceWriteUseMutex="of_containing_object">
+      <d:documentation>Writing will send the contained value to the given SPI slave according to the rules set in the configuration entries.</d:documentation>
+    </d:sourcevariable>
+    <d:configentry dataType="OpcUa_Byte" name="slaveId">
+      <d:documentation>The individual Slave Select lines. Allowed slaveId values ranges from 0 to 7.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByBounds minInclusive="0" maxInclusive="7"/>
+      </d:configRestriction>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Boolean" name="sclkIdleHigh">
+      <d:documentation>Setting that defines the behavior of SCLK level during inactivity time. </d:documentation>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Boolean" name="sampleAtFallingRxEdge">
+      <d:documentation>Defines the SCLK sampling edge of the MISO input line.</d:documentation>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Boolean" name="sampleAtFallingTxEdge">
+      <d:documentation>Defines the SCLK transmit edge of the MOSI output line.</d:documentation>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Boolean" name="lsbToMsb">
+      <d:documentation>Defines the transmit order of the bits in the transmit FIFO and the position of the received bit in the received FIFO.
+    	<ul><li>If it is TRUE -&gt; Bits are transmitted from the least significant to the most significant.</li><li>If it is FALSE -&gt; Bits are transmitted from the most significant to the least significant.</li></ul>
+    	</d:documentation>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Boolean" name="autoSsMode">
+      <d:documentation>Defines if the Slave Select output signal is automatically or manually controlled.</d:documentation>
+    </d:configentry>
+    <d:method name="readSlave" executionSynchronicity="asynchronous">
+      <d:argument dataType="OpcUa_UInt32" name="numberOfChunks">
+        <d:documentation>Number of chunks of to gather. The chunks are defined by the transmissionSize(config entry).</d:documentation>
+      </d:argument>
+      <d:returnvalue dataType="UaByteString" name="reply">
+        <d:documentation>Read data. If successful, the size will be numberOfChunks*chunkSize where chunkSize is transmissionSize (config entry) calculated to bytes</d:documentation>
+      </d:returnvalue>
+      <d:documentation>Returns the SPI MISO line bytes for a given slave.</d:documentation>
+    </d:method>
+    <d:method name="writeSlave" executionSynchronicity="asynchronous">
+      <d:argument dataType="UaByteString" name="payload">
+        <d:documentation>Payload to be delivered in the MOSI line.</d:documentation>
+      </d:argument>
+    </d:method>
+    <d:configentry dataType="OpcUa_Boolean" name="toggleSs">
+      <d:documentation>Requests automatic toggling of Slave Select before and after a transfer.</d:documentation>
+    </d:configentry>
+    <d:documentation>Represents the connected SPI slaves to the SCA chip. Up to 8 slaves can be declared.</d:documentation>
+  </d:class>
+  <d:class name="DigitalIOSystem">
+    <d:devicelogic>
+    	<d:mutex /></d:devicelogic>
+    <d:hasobjects instantiateUsing="configuration" class="GpioBitBanger" minOccurs="0" maxOccurs="1"></d:hasobjects>
+    <d:hasobjects instantiateUsing="configuration" class="DigitalIO" maxOccurs="32" minOccurs="0">
+  	</d:hasobjects>
+    <d:sourcevariable dataType="UaString" name="diagnostics" addressSpaceRead="asynchronous" addressSpaceReadUseMutex="no" addressSpaceWrite="forbidden" addressSpaceWriteUseMutex="no">
+      <d:documentation>
+            Returns current diagnostic snapshot of GPIO component registers.
+        </d:documentation>
+    </d:sourcevariable>
+  </d:class>
+  <d:class name="DigitalIO">
+    <d:devicelogic></d:devicelogic>
+    <d:configentry dataType="OpcUa_Boolean" name="isInput"/>
+    <d:configentry dataType="OpcUa_Byte" name="id">
+      <d:configRestriction>
+        <d:restrictionByBounds maxInclusive="31"/>
+      </d:configRestriction>
+      <d:documentation>The GPIO pin number from 0 to 31 inclusive.</d:documentation>
+    </d:configentry>
+    <d:sourcevariable dataType="OpcUa_Boolean" name="value" addressSpaceRead="synchronous" addressSpaceReadUseMutex="no" addressSpaceWrite="asynchronous" addressSpaceWriteUseMutex="of_parent_of_containing_object">
+      <d:documentation>
+            Writing will set given GPIO pin (on condition that it is configured as output).
+            Reading will query the SCA about the current value of that pin.
+        </d:documentation>
+    </d:sourcevariable>
+    <d:documentation>Represents one GPIO pin of SCA chip.</d:documentation>
+  </d:class>
+  <d:class name="DacSystem">
+    <d:devicelogic/>
+    <d:hasobjects instantiateUsing="configuration" class="DacOutput" maxOccurs="32" minOccurs="0"/>
+    <d:documentation>Parent class of DAC channels. You can declare up to 4 channels.</d:documentation>
+  </d:class>
+  <d:class name="DacOutput">
+    <d:devicelogic>
+    	<d:mutex /></d:devicelogic>
+    <d:sourcevariable dataType="OpcUa_Double" name="voltage" addressSpaceRead="asynchronous" addressSpaceReadUseMutex="no" addressSpaceWrite="asynchronous" addressSpaceWriteUseMutex="no">
+      <d:documentation>
+        Writing to this variable will set given DAC channel output voltage if the value is in range, otherwise it will return bad OPC-UA status code.
+        The correct range is 0 to 1.15V.
+        Reading from this variable will query the SCA DAC channel current voltage and return approximate value in volts.
+        </d:documentation>
+    </d:sourcevariable>
+    <d:configentry dataType="UaString" name="id">
+      <d:documentation>Identifies the particular DAC channel.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByPattern pattern="A|B|C|D"/>
+      </d:configRestriction>
+    </d:configentry>
+  </d:class>
+  <d:class name="I2cSlave">
+    <d:devicelogic>
+      <d:mutex/>
+    </d:devicelogic>
+    <d:sourcevariable dataType="UaByteString" name="value" addressSpaceRead="asynchronous" addressSpaceReadUseMutex="of_containing_object" addressSpaceWrite="asynchronous" addressSpaceWriteUseMutex="of_containing_object">
+      <d:documentation>
+            Value can be accessed either for reading or writing.<br/><br/>
+            
+            <ul><li>Writing will send the <b>value</b> to the given I2C slave. The data bytes in multi-byte write transactions are transmitted from <b>value[0]</b> to <b>value[15]</b> in the byte-string.<br/><br/>
+            </li><li>Reading will trigger an I2C read to the given slave and will return its <b>value</b>. The returned <b>value</b> follows the same rule of endianess as when writing. <br/><br/>
+            e.g. Writining <code>data(0x1, 0x2)</code> followed by a read will result in <code>readBackData(0x1, 0x2)</code>.<br/><br/>
+            For reading, the "numberOfBytes" config attribute (look into config doc) dictates its size.
+            </li></ul>
+        </d:documentation>
+    </d:sourcevariable>
+    <d:configentry dataType="OpcUa_UInt16" name="address">
+      <d:documentation>The I2C slave address.
+    	<ul><li>Allowed values between 0-127 for 7-bit addressing mode.</li><li>Allowed values between 0-1023 for 10-bit addressing mode.</li></ul></d:documentation>
+      <d:configRestriction>
+        <d:restrictionByBounds minInclusive="0" maxInclusive="1023"/>
+      </d:configRestriction>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Byte" name="numberOfBytes">
+      <d:documentation>Supports single-byte or multi-byte I2C read/write bus operations. Allowed values between 1-16 in bytes.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByBounds minInclusive="1" maxInclusive="16"/>
+      </d:configRestriction>
+    </d:configentry>
+    <d:configentry dataType="OpcUa_Byte" name="addressingMode">
+      <d:documentation>Options are either 7 for 7bit addressing mode (default) or 10 for 10bit addressing mode.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByEnumeration>
+          <d:enumerationValue value="7"/>
+          <d:enumerationValue value="10"/>
+        </d:restrictionByEnumeration>
+      </d:configRestriction>
+    </d:configentry>
+    <d:method name="readSlave" executionSynchronicity="asynchronous">
+      <d:argument dataType="OpcUa_Byte" name="numberOfBytes">
+        <d:documentation>Number of bytes to read. This value is restricted by the SCA up to 16.</d:documentation>
+      </d:argument>
+      <d:returnvalue dataType="UaByteString" name="reply"/>
+      <d:documentation>Returns the result of an I2C read for the specified amount of bytes that were passed as an argument.</d:documentation>
+    </d:method>
+    <d:method name="writeSlave" executionSynchronicity="asynchronous">
+      <d:argument dataType="UaByteString" name="payload">
+        <d:documentation>Payload to be delivered to the I2C slave.</d:documentation>
+      </d:argument>
+      <d:documentation>Writes to the I2C slave it corresponds the paylod that was pass as an argument.</d:documentation>
+    </d:method>
+    <d:documentation>Represents an I2C slave connected to the parent I2C master on the SCA chip.</d:documentation>
+  </d:class>
+  <d:class name="Meta">
+    <d:cachevariable name="versionString" addressSpaceWrite="forbidden" initializeWith="valueAndStatus" nullPolicy="nullAllowed" dataType="UaString" initialStatus="OpcUa_Good">
+      <d:documentation>
+            Contains versions of the server, of the SCA-SW and relevant dependent libs (FELIX SW etc).
+        </d:documentation>
+    </d:cachevariable>
+  </d:class>
+  <d:class name="XilinxFpga">
+    <d:devicelogic/>
+    <d:method name="program" executionSynchronicity="asynchronous">
+      <d:argument dataType="UaByteString" name="bitstring">
+        <d:documentation>A blob in the .BIT format, as generated by Xilinx tools.</d:documentation>
+      </d:argument>
+      <d:documentation>Performs configuration (firmware storage) of attached FPGA.</d:documentation>
+    </d:method>
+    <d:configentry dataType="OpcUa_UInt16" name="jtagClockMhz" storedInDeviceObject="true">
+      <d:configRestriction>
+        <d:restrictionByEnumeration>
+          <d:enumerationValue value="1"/>
+          <d:enumerationValue value="2"/>
+          <d:enumerationValue value="4"/>
+          <d:enumerationValue value="5"/>
+          <d:enumerationValue value="10"/>
+        </d:restrictionByEnumeration>
+      </d:configRestriction>
+      <d:documentation>The bitrate of the JTAG.</d:documentation>
+    </d:configentry>
+    <d:sourcevariable dataType="OpcUa_UInt32" name="idcodeNumeric" addressSpaceRead="asynchronous" addressSpaceReadUseMutex="of_parent_of_containing_object" addressSpaceWrite="forbidden" addressSpaceWriteUseMutex="no">
+      <d:documentation>Returns IDCODE (as per JTAG "IDCODE" command) of the attached slave as an unsigned number.</d:documentation>
+    </d:sourcevariable>
+    <d:sourcevariable dataType="UaString" name="idcodeString" addressSpaceRead="asynchronous" addressSpaceReadUseMutex="of_parent_of_containing_object" addressSpaceWrite="forbidden" addressSpaceWriteUseMutex="no">
+      <d:documentation>Returns IDCODE (as per JTAG "IDCODE" command) of the attached slave as a hex string.</d:documentation>
+    </d:sourcevariable>
+    <d:documentation>Represents a Xilinx 7-series FPGA.</d:documentation>
+  </d:class>
+  <d:class name="JtagSystem">
+    <d:devicelogic>
+      <d:mutex></d:mutex>
+    </d:devicelogic>
+    <d:hasobjects instantiateUsing="configuration" class="XilinxFpga" maxOccurs="1"/>
+  </d:class>
+  <d:class name="ScaSupervisor">
+    <d:devicelogic/>
+    <d:cachevariable initializeWith="valueAndStatus" dataType="OpcUa_UInt16" name="numberOffline" nullPolicy="nullAllowed" addressSpaceWrite="forbidden" initialStatus="OpcUa_BadWaitingForInitialData">
+      <d:documentation>
+            Stores a number of SCAs which are in deferred initialization ("not yet online") plus those which were initialized but are currently offline.
+            The update rate varies depending on the configuration and total number of SCAs declared per server.
+        </d:documentation>
+    </d:cachevariable>
+  </d:class>
+  <d:class name="AdcSampler">
+    <d:devicelogic/>
+    <d:configentry dataType="OpcUa_UInt16" name="maxNumberThreads" storedInDeviceObject="true">
+      <d:documentation>Maximum number of threads that might be devoted to ADC sampling.</d:documentation>
+      <d:configRestriction>
+        <d:restrictionByBounds maxInclusive="16" minInclusive="1"/>
+      </d:configRestriction>
+    </d:configentry>
+  </d:class>
+  <d:class name="GlobalStatistician">
+    <d:devicelogic/>
+    <d:cachevariable initializeWith="valueAndStatus" dataType="OpcUa_Float" name="requestRate" nullPolicy="nullAllowed" addressSpaceWrite="forbidden" initialStatus="OpcUa_BadWaitingForInitialData">
+      </d:cachevariable>
+    <d:cachevariable initializeWith="valueAndStatus" dataType="OpcUa_UInt64" name="totalNumberLostReplies"
+        nullPolicy="nullAllowed" addressSpaceWrite="forbidden" initialStatus="OpcUa_BadWaitingForInitialData">
+    </d:cachevariable>
+  </d:class>
+  <d:class name="GpioBitBanger">
+  	<d:devicelogic>
+  	</d:devicelogic>
+  	<d:method name="bitBang" executionSynchronicity="asynchronous">
+  		<d:argument dataType="UaByteString" name="requestsMessageSerialized">
+  			<d:documentation>The serialized message passed by the OPC UA client using protobuf API. See UaoClientForScaSw for reference on how to construct data for this method.</d:documentation></d:argument>
+  		<d:returnvalue dataType="OpcUa_UInt32" name="readRegisterData">
+  			<d:array /><d:documentation>The readback data for the GPIO read requests in the group. Each element of this array contains the data for all 32 pins as in the DATA_IN register.</d:documentation></d:returnvalue>
+  		<d:documentation>BitBanger method that groups GPIO requests and sends them in a single go.</d:documentation></d:method>
+  	<d:configentry dataType="OpcUa_UInt32" name="allowedPins">
+  		<d:array ></d:array><d:documentation>The pins in which the bit banging operations are allowed. The GPIO pinsshall be from 0 to 31 inclusive.</d:documentation></d:configentry>
+  </d:class>
+  <d:root>
+    <d:hasobjects instantiateUsing="configuration" class="SCA"/>
+    <d:hasobjects instantiateUsing="design" class="Meta">
+      <d:object name="Meta"/>
+    </d:hasobjects>
+    <d:hasobjects instantiateUsing="design" class="ScaSupervisor" maxOccurs="1" minOccurs="1">
+      <d:object name="theSupervisor"/>
+    </d:hasobjects>
+    <d:hasobjects instantiateUsing="design" class="GlobalStatistician" minOccurs="1" maxOccurs="1">
+      <d:object name="theGlobalStatistician"/>
+    </d:hasobjects>
+    <d:hasobjects instantiateUsing="configuration" class="AdcSampler" maxOccurs="1" minOccurs="0"/>
+  </d:root>
+</d:design>

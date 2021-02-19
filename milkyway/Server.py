@@ -19,7 +19,7 @@ class Server():
         self._quasar_classes = {}
         for klass in self.design_inspector.get_names_of_all_classes():
             objectified_class = self.design_inspector.objectify_class(klass)
-            quasar_class = QuasarClass(objectified_class, self.ua_server)
+            quasar_class = QuasarClass(objectified_class, self)
             self._quasar_classes[klass] = quasar_class
         logging.error(f'Loading quasar classes: end, loaded {len(self._quasar_classes)}')
 
@@ -28,11 +28,11 @@ class Server():
 
         self.ua_server = opcua.Server()
         self.ua_server.set_endpoint("opc.tcp://0.0.0.0:4841")
-        self.ua_server.register_namespace('urn:QuasarNameSpace')
+        self.quasar_nsi = self.ua_server.register_namespace('urn:QuasarNameSpace')
 
         self._load_quasar_classes()
         for quasar_class in self._quasar_classes.values():
-            quasar_class._instantiate_type(self.ua_server)
+            quasar_class._instantiate_type(self.ua_server, self.quasar_nsi)
 
 
 

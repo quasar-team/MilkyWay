@@ -21,6 +21,7 @@ class QuasarClass():
         object_node = ua_server.get_node(object_nodeid)
         object_node.add_variable(ns_index, "Variable", initial_value)
         self._instantiate_cache_variables(ua_server, object_node)
+        self._instantiate_methods(ua_server, object_node)
         logging.error(f'Instantiating quasar class: end')
 
     def _instantiate_cache_variables(self, ua_server: opcua.Server, object_node):
@@ -28,3 +29,8 @@ class QuasarClass():
             print(cv.attrib['name'])
             initial_value = None
             object_node.add_variable(1, cv.attrib['name'], initial_value)
+
+    def _instantiate_methods(self, ua_server: opcua.Server, object_node):
+        for method in self._objectified_class.method:
+            print(f"Method: {method.attrib['name']}")
+            object_node.add_method(1, method.attrib['name'], None)

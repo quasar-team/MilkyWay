@@ -36,15 +36,21 @@ class Server():
 
 
 
-    def run(self):
+    def start(self, wait_for_stop=False):
         """Runs this server, i.e. start handling OPCUA requests"""
 
-
         self.ua_server.start()
+        if wait_for_stop:
+            self.wait_for_stop()
+            self.stop()
 
-
-        try:
-            time.sleep(1E6)
-        except KeyboardInterrupt:
-            print("Received Ctrl-C, exiting")
+    def stop(self):
         self.ua_server.stop()
+
+    def wait_for_stop(self):
+        while True:
+            try:
+                time.sleep(1E6)
+            except KeyboardInterrupt:
+                print("Received Ctrl-C, exiting")
+                return

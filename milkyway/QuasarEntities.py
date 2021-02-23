@@ -1,11 +1,31 @@
 import logging
 import opcua
+from opcua.ua import VariantType
+import pdb
+
+class MilkyWayOracle():
+    DataTypeToVariantType = {
+        'OpcUa_Double'  : VariantType.Int32,
+        'OpcUa_Float'   : 'toFloat',
+        'OpcUa_Byte'    : 'toByte',
+        'OpcUa_SByte'   : 'toSByte',
+        'OpcUa_Int16'   : 'toInt16',
+        'OpcUa_UInt16'  : 'toUInt16',
+        'OpcUa_Int32'   : VariantType.Int32,
+        'OpcUa_UInt32'  : 'toUInt32',
+        'OpcUa_Int64'   : 'toInt64',
+        'OpcUa_UInt64'  : 'toUInt64',
+        'OpcUa_Boolean' : 'toBool',
+        'UaByteString'  : 'toByteString'
+    }
+
 
 class QuasarClass():
     """Represents a QuasarClass"""
     def __init__(self, objectified_class, milkyway_server):
         # TODO: need objectified class ?
         # should we have a ref to milkyway server
+        self.design_inspector = milkyway_server.design_inspector
         self.milkyway_server = milkyway_server
         self._objectified_class = objectified_class
         self.name = objectified_class.attrib['name']
@@ -15,6 +35,8 @@ class QuasarClass():
         types_node.add_object_type(ns_index, self.name) # TODO: wrong address!
 
     def instantiate_object(self, ua_server: opcua.Server, parent_nodeid: opcua.ua.uatypes.NodeId, name, ns_index):
+        if isinstance(parent_nodeid, str):
+            parent_nodeid = opcua.ua.NodeId(opcua.ua.ObjectIds.ObjectsFolder)
         logging.error(f'Instantiating quasar class {self.name}: begin')
         object_nodeid = ua_server.get_node(parent_nodeid).add_object (ns_index, name)
         initial_value = "Acs"
@@ -42,7 +64,8 @@ class QuasarObject():
     def set_cv(self, cv_name, value, status=None, source_time=None):
         if not cv_name in self.cache_variables:
             raise IndexError(f'No such cache-variable {cv_name} in quasar class {self.quasar_class.name}')
-        
+        # pdb.set_trace()
+        # per_design_datatype = self.quasar_class.design_inspector.objecty_cache_variableattrib['datatype']
         self.cache_variables[cv_name].set_value(value)
 
 

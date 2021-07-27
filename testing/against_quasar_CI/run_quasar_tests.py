@@ -44,10 +44,15 @@ import re
 from milkyway import Server
 import time
 
-def run_test(design):
+def run_test(design, config=None, compare_with_nodeset=None):
     server = Server(os.path.join('quasar', design))
     server.start()
-    time.sleep(60)
+    time.sleep(3)
+    os.system('uasak_dump --endpoint_url opc.tcp://127.0.0.1:4841')
+    if compare_with_nodeset:
+        ref_ns2_path = os.path.join('quasar', compare_with_nodeset)
+        rv = os.system(f'~/gitProjects/NodeSetTools/nodeset_compare.py {ref_ns2_path} dump.xml --ignore_nodeids StandardMetaData')
+        print(f'RV was: {rv}')
     server.stop()
 
 def fetch_option(cmd, option):
@@ -70,8 +75,10 @@ def parse_command(cmd):
     if design_path is None:
         print('Assuming default design because --design was not given')
         design_path = 'Design/Design.xml'
-    print(f'{Fore.GREEN}Design: {design_path}{Style.RESET_ALL}')
-    run_test(design_path)
+    print(f'{Fore.GREEN}Design:{Style.RESET_ALL} {design_path}')
+    compare_with_nodeset = fetch_option(test_cmd_line, 'compare_with_nodeset')
+    print(f'{Fore.GREEN}Compare with nodeset:{Style.RESET_ALL} {compare_with_nodeset}')
+    run_test(design_path, compare_with_nodeset=compare_with_nodeset)
 
 
 def main():

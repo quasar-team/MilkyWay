@@ -57,7 +57,6 @@ class Server():
         for has_obj in has_objs:
             klass = has_obj.attrib['class']
             print(klass)
-        pdb.set_trace()
 
         print('Note: config instantiation not yet done!')
         pass

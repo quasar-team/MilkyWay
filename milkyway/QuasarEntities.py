@@ -74,14 +74,17 @@ class QuasarObject():
 
 
     def _instantiate_cache_variables(self, ua_server: opcua.Server, object_node):
-        for cv in self.quasar_class._objectified_class.cachevariable:
-            print(cv.attrib['name'])
-            initial_value = None
-            var_node_id = object_node.add_variable(1, cv.attrib['name'], initial_value)
-            var_node = ua_server.get_node(var_node_id)
-            self.cache_variables[cv.attrib['name']] = var_node
-            setter_name = f"set{cv.attrib['name'].title()}"
-            self.cache_variables_setters[setter_name] = cv.attrib['name']
+        try:
+            for cv in self.quasar_class._objectified_class.cachevariable:
+                print(cv.attrib['name'])
+                initial_value = None
+                var_node_id = object_node.add_variable(1, cv.attrib['name'], initial_value)
+                var_node = ua_server.get_node(var_node_id)
+                self.cache_variables[cv.attrib['name']] = var_node
+                setter_name = f"set{cv.attrib['name'].title()}"
+                self.cache_variables_setters[setter_name] = cv.attrib['name']
+        except AttributeError:
+            pass # no cache variables in this class.
 
     def __getattr__(self, name):
         print(f'getattr on {name}')

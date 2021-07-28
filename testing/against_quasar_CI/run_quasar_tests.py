@@ -47,7 +47,7 @@ import time
 def run_test(design, config=None, compare_with_nodeset=None):
     server = Server(os.path.join('quasar', design))
     if config:
-        server.instantiate_from_config(config)
+        server.instantiate_from_config(os.path.join('quasar', config))
     server.start()
     time.sleep(3)
     os.system('uasak_dump --endpoint_url opc.tcp://127.0.0.1:4841')

@@ -4,11 +4,12 @@ import time
 from milkyway.DesignInspector import DesignInspector
 from milkyway.QuasarEntities import QuasarClass
 import logging
-
-
+from lxml import etree
+import pdb
 
 class Server():
     def __init__(self, quasar_design_path):
+        etree.register_namespace('c', 'http://cern.ch/quasar/Configuration')
         self.design_inspector = DesignInspector(quasar_design_path)
         self.initialize()
 
@@ -35,6 +36,29 @@ class Server():
             quasar_class._instantiate_type(self.ua_server, self.quasar_nsi)
 
     def instantiate_from_config(self, config_file):
+        config_file = open(config_file, 'r', encoding='utf-8')
+        tree = etree.parse(config_file)
+
+        root = tree.getroot()
+
+        for child in root.getchildren():
+            if child.tag == '{http://cern.ch/quasar/Configuration}StandardMetaData':
+                print('WRN: reading of StandardMetaData not yet supported!')
+                continue
+            klass = child.tag.replace('{http://cern.ch/quasar/Configuration}', '')
+            # do we have this class?
+            quasar_class = self._quasar_classes[klass]
+            new_object = quasar_class.instantiate_object(self.ua_server, '.', child.attrib['name'], self.quasar_nsi)
+            print(quasar_class)
+            print(child.tag)
+
+        # which quasar classes are at the root?
+        has_objs = self.design_inspector.objectify_any("/d:design/d:root/d:hasobjects[@instantiateUsing='configuration']")
+        for has_obj in has_objs:
+            klass = has_obj.attrib['class']
+            print(klass)
+        pdb.set_trace()
+
         print('Note: config instantiation not yet done!')
         pass
 

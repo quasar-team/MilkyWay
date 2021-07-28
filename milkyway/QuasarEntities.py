@@ -48,9 +48,12 @@ class QuasarClass():
         return quasar_object
 
     def _instantiate_methods(self, ua_server: opcua.Server, object_node):
-        for method in self._objectified_class.method:
-            print(f"Method: {method.attrib['name']}")
-            object_node.add_method(1, method.attrib['name'], None)
+        try:
+            for method in self._objectified_class.method:
+                print(f"Method: {method.attrib['name']}")
+                object_node.add_method(1, method.attrib['name'], None)
+        except AttributeError:
+            pass # it's fine, there are no methods.
 
 class QuasarObject():
     """Represents an OPCUA object created with milkyway"""

@@ -46,6 +46,8 @@ import time
 
 def run_test(design, config=None, compare_with_nodeset=None):
     server = Server(os.path.join('quasar', design))
+    if config:
+        server.instantiate_from_config(config)
     server.start()
     time.sleep(3)
     os.system('uasak_dump --endpoint_url opc.tcp://127.0.0.1:4841')
@@ -71,14 +73,18 @@ def parse_command(cmd):
         return
     test_cmd_line = matches.groups(0)[0]
     print(f'{Fore.BLUE}found cmd line{Style.RESET_ALL}: {test_cmd_line}')
-    design_path = fetch_option(test_cmd_line, 'design')
-    if design_path is None:
+
+    args_names = ['design', 'config', 'compare_with_nodeset']
+    args = {name: fetch_option(test_cmd_line, name) for name in args_names}
+
+    if args['design'] is None:
         print('Assuming default design because --design was not given')
-        design_path = 'Design/Design.xml'
-    print(f'{Fore.GREEN}Design:{Style.RESET_ALL} {design_path}')
-    compare_with_nodeset = fetch_option(test_cmd_line, 'compare_with_nodeset')
-    print(f'{Fore.GREEN}Compare with nodeset:{Style.RESET_ALL} {compare_with_nodeset}')
-    run_test(design_path, compare_with_nodeset=compare_with_nodeset)
+        args['design'] = 'Design/Design.xml'
+
+    for arg_name in args:
+        print(f'{Fore.GREEN}{arg_name}{Style.RESET_ALL}: {args[arg_name]}')
+
+    run_test(**args)
 
 
 def main():

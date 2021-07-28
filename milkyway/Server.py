@@ -34,6 +34,9 @@ class Server():
         for quasar_class in self._quasar_classes.values():
             quasar_class._instantiate_type(self.ua_server, self.quasar_nsi)
 
+    def instantiate_from_config(self, config_file):
+        print('Note: config instantiation not yet done!')
+        pass
 
 
     def start(self, wait_for_stop=False):

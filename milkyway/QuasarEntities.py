@@ -38,7 +38,9 @@ class QuasarClass():
         if isinstance(parent_nodeid, str):
             parent_nodeid = opcua.ua.NodeId(opcua.ua.ObjectIds.ObjectsFolder)
         logging.error(f'Instantiating quasar class {self.name}: begin')
-        object_nodeid = ua_server.get_node(parent_nodeid).add_object (ns_index, name)
+        #pdb.set_trace()
+        requested_node_id = opcua.ua.StringNodeId(name, 2)
+        object_nodeid = ua_server.get_node(parent_nodeid).add_object (requested_node_id, name)
         initial_value = "Acs"
         object_node = ua_server.get_node(object_nodeid)
         self._instantiate_methods(ua_server, object_node)
@@ -78,7 +80,9 @@ class QuasarObject():
             for cv in self.quasar_class._objectified_class.cachevariable:
                 print(cv.attrib['name'])
                 initial_value = None
-                var_node_id = object_node.add_variable(1, cv.attrib['name'], initial_value)
+                #pdb.set_trace()
+                requested_node_id = opcua.ua.StringNodeId(object_node.nodeid.Identifier+'.'+cv.attrib['name'], 2)
+                var_node_id = object_node.add_variable(requested_node_id, cv.attrib['name'], initial_value)
                 var_node = ua_server.get_node(var_node_id)
                 self.cache_variables[cv.attrib['name']] = var_node
                 setter_name = f"set{cv.attrib['name'].title()}"

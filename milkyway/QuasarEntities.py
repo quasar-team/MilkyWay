@@ -75,19 +75,22 @@ class QuasarClass():
         types_node.add_object_type(ns_index, self.name) # TODO: wrong address!
 
     def instantiate_object(self, ua_server: opcua.Server, parent_nodeid: opcua.ua.uatypes.NodeId, name, ns_index):
-        if isinstance(parent_nodeid, str):
-            parent_nodeid = opcua.ua.NodeId(opcua.ua.ObjectIds.ObjectsFolder)
-        logging.debug(f'Instantiating quasar class {self.name}: begin')
+        logging.debug(f'Instantiating quasar class {self.name} under parent nodeid {parent_nodeid}: begin')
         #pdb.set_trace()
-        requested_node_id = opcua.ua.StringNodeId(name, 2)
+        if parent_nodeid == opcua.ua.NodeId(opcua.ua.ObjectIds.ObjectsFolder):
+            string_addr = name
+        else:
+            string_addr = parent_nodeid.Identifier + '.' + name
+        requested_node_id = opcua.ua.StringNodeId(string_addr, 2)
+        logging.debug(f'Requesting node-id: {requested_node_id}')
         object_nodeid = ua_server.get_node(parent_nodeid).add_object (requested_node_id, name)
         initial_value = "Acs"
         object_node = ua_server.get_node(object_nodeid)
         self._instantiate_methods(ua_server, object_node)
         quasar_object = QuasarObject(self)
         quasar_object._instantiate_cache_variables(ua_server, object_node)
-        quasar_object.nodeid = object_nodeid
-        logging.error(f'Instantiating quasar class: end')
+        quasar_object.nodeid = object_nodeid.nodeid
+        logging.debug(f'Instantiating quasar class: end')
         return quasar_object
 
     def _instantiate_methods(self, ua_server: opcua.Server, object_node):

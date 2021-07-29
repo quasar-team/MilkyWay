@@ -37,6 +37,8 @@ class Server():
 
     def recursive_instantiation(self, parent_element, parent_nodeid):
         for child in parent_element:
+            if type(child) != etree._Element:
+                continue
             klass = child.tag.replace('{http://cern.ch/quasar/Configuration}', '')
             if klass in ['StandardMetaData', 'CalculatedVariable']:
                 continue # maybe a nice warning?

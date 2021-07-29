@@ -132,6 +132,9 @@ class QuasarObject():
                     var_node.set_value_rank(1) # array:
                 else:
                     var_node.set_value_rank(0) # scalar
+
+                if cv.get('addressSpaceWrite') in ['regular', 'delegated']:
+                    var_node.set_writable(True)
                 self.cache_variables[cv.attrib['name']] = var_node
                 setter_name = f"set{cv.attrib['name'].title()}"
                 self.cache_variables_setters[setter_name] = cv.attrib['name']

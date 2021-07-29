@@ -20,14 +20,44 @@ class MilkyWayOracle():
     }
 
     QuasarDataTypeToDataType = {
-        'OpcUa_Double'  : opcua.ua.NodeId(11)
+        'OpcUa_Double'  : opcua.ua.NodeId(11),
+        'OpcUa_Float'   : 'toFloat',
+        'OpcUa_Byte'    : 'toByte',
+        'OpcUa_SByte'   : 'toSByte',
+        'OpcUa_Int16'   : 'toInt16',
+        'OpcUa_UInt16'  : 'toUInt16',
+        'OpcUa_Int32'   : VariantType.Int32,
+        'OpcUa_UInt32'  : 'toUInt32',
+        'OpcUa_Int64'   : 'toInt64',
+        'OpcUa_UInt64'  : 'toUInt64',
+        'OpcUa_Boolean' : 'toBool',
+        'UaByteString'  : 'toByteString'
     }
 
-    def quasar_data_type_to_node_id(quasar_data_type):
-        try:
-            return MilkyWayOracle.QuasarDataTypeToDataType[quasar_data_type]
-        except KeyError:
-            return opcua.ua.NodeId(24) # this is temporary
+    def quasar_data_type_to_variant_type(quasar_data_type):
+        '''Will find the stack's variant type from quasars data type, as per Design.
+        Example: for "OpcUa_Int16" it shall return opcua.ua.uatypes.VariantType.Int16'''
+        if quasar_data_type.startswith('OpcUa_'):
+            raw_data_type = quasar_data_type.replace('OpcUa_', '')
+            matching_raw_types = [ x for x in opcua.ua.uatypes.VariantType if x.name == raw_data_type]
+            if len(matching_raw_types) == 1:
+                return matching_raw_types[0]
+            else:
+                raise Exception(f'datatype {quasar_data_type} unknown or not implemented yet')
+        else:
+            remaining_types = {
+                'UaString' : opcua.ua.uatypes.VariantType.String,
+                'UaVariant' : opcua.ua.uatypes.VariantType.Variant
+            }
+            try:
+                return remaining_types[quasar_data_type]
+            except KeyError:
+                raise NotImplementedError(f'datatype: {quasar_data_type}')
+
+    def quasar_data_type_to_type_def_id(quasar_data_type):
+        variant_type = MilkyWayOracle.quasar_data_type_to_variant_type(quasar_data_type)
+        # Let's profit from the fact that variant types match type node ids in NS0 for the basic built-in types
+        return opcua.ua.NodeId(variant_type.value)
 
 
 class QuasarClass():
@@ -91,7 +121,7 @@ class QuasarObject():
                 print(cv.attrib['name'])
                 initial_value = None
                 #pdb.set_trace()
-                data_type = MilkyWayOracle.quasar_data_type_to_node_id(cv.attrib['dataType'])
+                data_type = MilkyWayOracle.quasar_data_type_to_type_def_id(cv.attrib['dataType'])
                 requested_node_id = opcua.ua.StringNodeId(object_node.nodeid.Identifier+'.'+cv.attrib['name'], 2)
                 var_node_id = object_node.add_variable(requested_node_id, cv.attrib['name'], initial_value, datatype=data_type)
                 var_node = ua_server.get_node(var_node_id)

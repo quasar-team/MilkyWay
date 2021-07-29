@@ -125,6 +125,13 @@ class QuasarObject():
                 requested_node_id = opcua.ua.StringNodeId(object_node.nodeid.Identifier+'.'+cv.attrib['name'], 2)
                 var_node_id = object_node.add_variable(requested_node_id, cv.attrib['name'], initial_value, datatype=data_type)
                 var_node = ua_server.get_node(var_node_id)
+                # if 'array' in cv.attrib['name']:
+                #     pdb.set_trace()
+                array_elems = [x for x in cv.iter() if x.tag == '{http://cern.ch/quasar/Design}array']
+                if len(array_elems) > 0:
+                    var_node.set_value_rank(1) # array:
+                else:
+                    var_node.set_value_rank(0) # scalar
                 self.cache_variables[cv.attrib['name']] = var_node
                 setter_name = f"set{cv.attrib['name'].title()}"
                 self.cache_variables_setters[setter_name] = cv.attrib['name']

@@ -77,7 +77,7 @@ class QuasarClass():
     def instantiate_object(self, ua_server: opcua.Server, parent_nodeid: opcua.ua.uatypes.NodeId, name, ns_index):
         if isinstance(parent_nodeid, str):
             parent_nodeid = opcua.ua.NodeId(opcua.ua.ObjectIds.ObjectsFolder)
-        logging.error(f'Instantiating quasar class {self.name}: begin')
+        logging.debug(f'Instantiating quasar class {self.name}: begin')
         #pdb.set_trace()
         requested_node_id = opcua.ua.StringNodeId(name, 2)
         object_nodeid = ua_server.get_node(parent_nodeid).add_object (requested_node_id, name)
@@ -86,6 +86,7 @@ class QuasarClass():
         self._instantiate_methods(ua_server, object_node)
         quasar_object = QuasarObject(self)
         quasar_object._instantiate_cache_variables(ua_server, object_node)
+        quasar_object.nodeid = object_nodeid
         logging.error(f'Instantiating quasar class: end')
         return quasar_object
 

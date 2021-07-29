@@ -35,22 +35,34 @@ class Server():
         for quasar_class in self._quasar_classes.values():
             quasar_class._instantiate_type(self.ua_server, self.quasar_nsi)
 
+    def recursive_instantiation(self, parent_element, parent_nodeid):
+        for child in parent_element:
+            klass = child.tag.replace('{http://cern.ch/quasar/Configuration}', '')
+            if klass in ['StandardMetaData', 'CalculatedVariable']:
+                continue # maybe a nice warning?
+            try:
+                quasar_class = self._quasar_classes[klass]
+                new_object = quasar_class.instantiate_object(self.ua_server, parent_nodeid, child.attrib['name'], self.quasar_nsi)
+                self.recursive_instantiation(child, new_object.nodeid)
+            except KeyError as ex:
+                print(f'Exception caught: {ex}')
+
     def instantiate_from_config(self, config_file):
         config_file = open(config_file, 'r', encoding='utf-8')
         tree = etree.parse(config_file)
 
         root = tree.getroot()
+        self.recursive_instantiation(root, opcua.ua.NodeId(opcua.ua.ObjectIds.ObjectsFolder))
 
-        for child in root.getchildren():
-            if child.tag == '{http://cern.ch/quasar/Configuration}StandardMetaData':
-                print('WRN: reading of StandardMetaData not yet supported!')
-                continue
-            klass = child.tag.replace('{http://cern.ch/quasar/Configuration}', '')
-            # do we have this class?
-            quasar_class = self._quasar_classes[klass]
-            new_object = quasar_class.instantiate_object(self.ua_server, '.', child.attrib['name'], self.quasar_nsi)
-            print(quasar_class)
-            print(child.tag)
+        # for child in root.getchildren():
+        #     if child.tag == '{http://cern.ch/quasar/Configuration}StandardMetaData':
+        #         print('WRN: reading of StandardMetaData not yet supported!')
+        #         continue
+        #     klass = child.tag.replace('{http://cern.ch/quasar/Configuration}', '')
+        #     # do we have this class?
+        #     quasar_class = self._quasar_classes[klass]
+        #     new_object = quasar_class.instantiate_object(self.ua_server, '.', child.attrib['name'], self.quasar_nsi)
+
 
         # which quasar classes are at the root?
         has_objs = self.design_inspector.objectify_any("/d:design/d:root/d:hasobjects[@instantiateUsing='configuration']")

@@ -19,6 +19,16 @@ class MilkyWayOracle():
         'UaByteString'  : 'toByteString'
     }
 
+    QuasarDataTypeToDataType = {
+        'OpcUa_Double'  : opcua.ua.NodeId(11)
+    }
+
+    def quasar_data_type_to_node_id(quasar_data_type):
+        try:
+            return MilkyWayOracle.QuasarDataTypeToDataType[quasar_data_type]
+        except KeyError:
+            return opcua.ua.NodeId(24) # this is temporary
+
 
 class QuasarClass():
     """Represents a QuasarClass"""
@@ -81,8 +91,9 @@ class QuasarObject():
                 print(cv.attrib['name'])
                 initial_value = None
                 #pdb.set_trace()
+                data_type = MilkyWayOracle.quasar_data_type_to_node_id(cv.attrib['dataType'])
                 requested_node_id = opcua.ua.StringNodeId(object_node.nodeid.Identifier+'.'+cv.attrib['name'], 2)
-                var_node_id = object_node.add_variable(requested_node_id, cv.attrib['name'], initial_value)
+                var_node_id = object_node.add_variable(requested_node_id, cv.attrib['name'], initial_value, datatype=data_type)
                 var_node = ua_server.get_node(var_node_id)
                 self.cache_variables[cv.attrib['name']] = var_node
                 setter_name = f"set{cv.attrib['name'].title()}"

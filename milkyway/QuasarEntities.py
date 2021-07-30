@@ -1,22 +1,22 @@
 import logging
 import opcua
-from opcua.ua import VariantType
+from opcua.ua import Variant, VariantType
 import pdb
 
 class MilkyWayOracle():
     DataTypeToVariantType = {
-        'OpcUa_Double'  : VariantType.Int32,
-        'OpcUa_Float'   : 'toFloat',
-        'OpcUa_Byte'    : 'toByte',
-        'OpcUa_SByte'   : 'toSByte',
-        'OpcUa_Int16'   : 'toInt16',
-        'OpcUa_UInt16'  : 'toUInt16',
+        'OpcUa_Double'  : VariantType.Double,
+        'OpcUa_Float'   : VariantType.Float,
+        'OpcUa_Byte'    : VariantType.Byte,
+        'OpcUa_SByte'   : VariantType.SByte,
+        'OpcUa_Int16'   : VariantType.Int16,
+        'OpcUa_UInt16'  : VariantType.UInt16,
         'OpcUa_Int32'   : VariantType.Int32,
-        'OpcUa_UInt32'  : 'toUInt32',
-        'OpcUa_Int64'   : 'toInt64',
-        'OpcUa_UInt64'  : 'toUInt64',
-        'OpcUa_Boolean' : 'toBool',
-        'UaByteString'  : 'toByteString'
+        'OpcUa_UInt32'  : VariantType.UInt32,
+        'OpcUa_Int64'   : VariantType.Int64,
+        'OpcUa_UInt64'  : VariantType.UInt64,
+        'OpcUa_Boolean' : VariantType.Boolean,
+        'UaByteString'  : VariantType.ByteString
     }
 
     QuasarDataTypeToDataType = {
@@ -58,6 +58,12 @@ class MilkyWayOracle():
         variant_type = MilkyWayOracle.quasar_data_type_to_variant_type(quasar_data_type)
         # Let's profit from the fact that variant types match type node ids in NS0 for the basic built-in types
         return opcua.ua.NodeId(variant_type.value)
+
+    def translate_initial_status(status_text):
+        if status_text == 'OpcUa_BadWaitingForInitialData':
+            return opcua.ua.status_codes.StatusCodes.BadWaitingForInitialData
+        else:
+            raise NotImplementedError
 
 
 class QuasarClass():
@@ -117,6 +123,16 @@ class QuasarObject():
         # per_design_datatype = self.quasar_class.design_inspector.objecty_cache_variableattrib['datatype']
         self.cache_variables[cv_name].set_value(value)
 
+    def valueandstatus_initialization_to_variant(value_as_str, quasar_data_type):
+        if quasar_data_type == 'UaString':
+            return Variant(value_as_str)
+        elif quasar_data_type in ['OpcUa_Byte', 'OpcUa_SByte', 'OpcUa_UInt16', 'OpcUa_Int16',
+            'OpcUa_UInt32', 'OpcUa_Int32', 'OpcUa_UInt64', 'OpcUa_Int64']:
+            return Variant(int(value_as_str), varianttype=MilkyWay.DataTypeToVariantType(quasar_data_type))
+        elif quasar_data_type in ['OpcUa_Float', 'OpcUa_Double']:
+            return Variant(float(value_as_str), varianttype=MilkyWay.DataTypeToVariantType(quasar_data_type))
+        else:
+            raise NotImplementedError(f'for type {quasar_data_type}')
 
 
     def _instantiate_cache_variables(self, ua_server: opcua.Server, object_node):
@@ -139,6 +155,31 @@ class QuasarObject():
 
                 if cv.get('addressSpaceWrite') in ['regular', 'delegated']:
                     var_node.set_writable(True)
+
+                initial_variant = opcua.ua.Variant(3.33, varianttype=VariantType.Float)
+
+                if cv.get('initializeWith') == 'valueAndStatus':
+                    initial_status = MilkyWayOracle.translate_initial_status(cv.get('initialStatus'))
+                    if not 'initialValue' in cv.attrib:
+                        initial_variant = Variant(None)
+                    else:
+                        initial_variant = QuasarObject.valueandstatus_initialization_to_variant(cv.get('initialValue'), cv.get('dataType'))
+                elif cv.get('initializeWith') == 'configuration':
+                    initial_status = opcua.ua.status_codes.StatusCodes.Good
+                else:
+                    raise Exception(f"initializeWith {cv.get('initializeWith')} is unsupported or the design is wrong")
+
+
+
+
+                initial_data_value = opcua.ua.DataValue(
+                    variant = initial_variant,
+                    status = opcua.ua.uatypes.StatusCode(opcua.ua.status_codes.StatusCodes.BadWaitingForInitialData)
+                )
+                # initial_data_value.StatusCode =
+                var_node.set_value(initial_data_value)
+                # pdb.set_trace()
+
                 self.cache_variables[cv.attrib['name']] = var_node
                 setter_name = f"set{cv.attrib['name'].title()}"
                 self.cache_variables_setters[setter_name] = cv.attrib['name']

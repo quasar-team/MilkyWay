@@ -62,6 +62,10 @@ class MilkyWayOracle():
     def translate_initial_status(status_text):
         if status_text == 'OpcUa_BadWaitingForInitialData':
             return opcua.ua.status_codes.StatusCodes.BadWaitingForInitialData
+        elif status_text == 'OpcUa_Good':
+            return opcua.ua.status_codes.StatusCodes.Good
+        elif status_Text == 'OpcUa_Bad':
+            return opcua.ua.status_codes.StatusCodes.Bad
         else:
             raise NotImplementedError
 

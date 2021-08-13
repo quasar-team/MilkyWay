@@ -41,6 +41,7 @@ class Server():
                 continue
             klass = child.tag.replace('{http://cern.ch/quasar/Configuration}', '')
             if klass in ['StandardMetaData', 'CalculatedVariable']:
+                print(f'{Fore.RED}Not implemented:{Style.RESET_ALL} no support yet for {klass}, skipping')
                 continue # maybe a nice warning?
             try:
                 quasar_class = self._quasar_classes[klass]

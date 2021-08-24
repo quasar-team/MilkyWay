@@ -12,6 +12,7 @@ class Server():
         etree.register_namespace('c', 'http://cern.ch/quasar/Configuration')
         self.design_inspector = DesignInspector(quasar_design_path)
         self.initialize()
+        self.objects = {}
 
     def _load_quasar_classes(self):
         """Loads quasar classes from Design into internal storage"""
@@ -68,13 +69,13 @@ class Server():
 
 
         # which quasar classes are at the root?
-        has_objs = self.design_inspector.objectify_any("/d:design/d:root/d:hasobjects[@instantiateUsing='configuration']")
-        for has_obj in has_objs:
-            klass = has_obj.attrib['class']
-            print(klass)
-
-        print('Note: config instantiation not yet done!')
-        pass
+        # has_objs = self.design_inspector.objectify_any("/d:design/d:root/d:hasobjects[@instantiateUsing='configuration']")
+        # for has_obj in has_objs:
+        #     klass = has_obj.attrib['class']
+        #     print(klass)
+        #
+        # print('Note: config instantiation not yet done!')
+        # pass
 
 
     def start(self, wait_for_stop=False):

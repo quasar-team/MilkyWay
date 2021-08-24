@@ -100,6 +100,8 @@ class QuasarClass():
         quasar_object = QuasarObject(self)
         quasar_object._instantiate_cache_variables(ua_server, object_node)
         quasar_object.nodeid = object_nodeid.nodeid
+        # pdb.set_trace()
+        self.milkyway_server.objects[requested_node_id.Identifier] = quasar_object
         logging.debug(f'Instantiating quasar class: end')
         return quasar_object
 

@@ -16,13 +16,13 @@ class Server():
     def _load_quasar_classes(self):
         """Loads quasar classes from Design into internal storage"""
 
-        logging.error('Loading quasar classes: begin')
+        logging.debug('Loading quasar classes: begin')
         self._quasar_classes = {}
         for klass in self.design_inspector.get_names_of_all_classes():
             objectified_class = self.design_inspector.objectify_class(klass)
             quasar_class = QuasarClass(objectified_class, self)
             self._quasar_classes[klass] = quasar_class
-        logging.error(f'Loading quasar classes: end, loaded {len(self._quasar_classes)}')
+        logging.debug(f'Loading quasar classes: end, loaded {len(self._quasar_classes)}')
 
     def initialize(self):
         """Creates FreeOPCUA server structure, populates types."""
